@@ -1,0 +1,18 @@
+project(fontconver C)
+#
+include(FindPkgConfig)
+
+# Locate freetype 2
+PKG_CHECK_MODULES(FREETYPE2 freetype2)
+
+IF (NOT FREETYPE2_FOUND)
+    MESSAGE(FATAL_ERROR "Cannot find freetype 2")
+ENDIF (NOT FREETYPE2_FOUND)
+
+#
+SET(SRCS fontconvert.c)
+include_directories(${FREETYPE2_INCLUDE_DIR})
+ADD_DEFINITIONS(${FREETYPE2_CFLAGS})
+ADD_EXECUTABLE(fontconvert ${SRCS})
+LINK_DIRECTORIES(${FREETYPE2_LIBRARY_DIR})
+TARGET_LINK_LIBRARIES(fontconvert  ${FREETYPE2_LIBRARIES})
