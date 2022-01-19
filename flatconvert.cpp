@@ -16,7 +16,6 @@ Keep 7-bit fonts around as an option in that case, more compact.
 
 See notes at end for glyph nomenclature & other tidbits.
 */
-#ifndef ARDUINO
 
 #include <ctype.h>
 #include <ft2build.h>
@@ -26,11 +25,22 @@ See notes at end for glyph nomenclature & other tidbits.
 #include FT_MODULE_H
 #include FT_TRUETYPE_DRIVER_H
 #include "gfxfont.h" // Adafruit_GFX font structures
+#include "string"
 
 #define DPI 141 // Approximate res. of Adafruit 2.8" TFT
+const int MAX_GLYPHS = 256;
+/**
+ * 
+ */
+void usage()
+{
+    fprintf(stderr, "Usage:  fontfile size [first] [last]\n");
+    exit(1);
+}
 
 // Accumulate bits for output, with periodic hexadecimal byte write
-void enbit(uint8_t value) {
+void enbit(uint8_t value) 
+{
   static uint8_t row = 0, sum = 0, bit = 0x80, firstCall = 1;
   if (value)
     sum |= bit;          // Set bit if needed
@@ -49,8 +59,12 @@ void enbit(uint8_t value) {
     firstCall = 0;         // Formatting flag
   }
 }
-
-const int MAX_GLYPHS = 256;
+/**
+ * 
+ * @param glyphs
+ * @param first
+ * @param last
+ */
 void setGlyphs(int *glyphs, int first, int last) {
   int i;
   if (last < first) {
@@ -63,10 +77,16 @@ void setGlyphs(int *glyphs, int first, int last) {
     glyphs[i] = (first <= i) && (i <= last);
   }
 }
-
-int main(int argc, char *argv[]) {
+/**
+ * 
+ * @param argc
+ * @param argv
+ * @return 
+ */
+int main(int argc, char *argv[]) 
+{
   int i, j, err, size, first = ' ', last = '~', bitmapOffset = 0, x, y, byte;
-  char *fontName, c, *ptr;
+  char  c, *ptr;
   FT_Library library;
   FT_Face face;
   FT_Glyph glyph;
@@ -76,76 +96,64 @@ int main(int argc, char *argv[]) {
   uint8_t bit;
   int glyphs[MAX_GLYPHS]; // glyphs to include in the output
 
-  // Parse command line.  Valid syntaxes are:
-  //   fontconvert [filename] [size]
-  //   fontconvert [filename] [size] [last char]
-  //   fontconvert [filename] [size] [first char] [last char]
-  // Unless overridden, default first and last chars are
-  // ' ' (space) and '~', respectively
-
-  if (argc < 3) {
-    fprintf(stderr, "Usage: %s fontfile size [first] [last]\n", argv[0]);
+  
+  if (argc < 3) 
+  {
+    usage();
+    
     return 1;
   }
 
   size = atoi(argv[2]);
 
-  if (argc == 4) {
-    last = atoi(argv[3]);
-    setGlyphs(glyphs, ' ', last);
-  } else if (argc == 5) {
-    if (strcmp(argv[3], "-s") != 0) {
-      first = atoi(argv[3]);
-      last = atoi(argv[4]);
-      setGlyphs(glyphs, first, last);
-    } else {
-      // set glyphs from argv[4]
-      first = MAX_GLYPHS;
-      last = 0;
-      for (i = 0; i < MAX_GLYPHS; i++) glyphs[i] = false;
-      for (ptr = argv[4]; *ptr; ptr++) {
-        i = (int)(*ptr);
-        if (i < first) {
-          first = i;
-        }
-        if (i > last) {
-          last = i;
-        }
-        glyphs[i] = true;
-      }
-    }
+  switch(argc)
+  {
+      case 4:
+            last = atoi(argv[3]);
+            setGlyphs(glyphs, ' ', last);
+            break;
+      case 5:
+            if (strcmp(argv[3], "-s") != 0) 
+            {
+                first = atoi(argv[3]);
+                last = atoi(argv[4]);
+                setGlyphs(glyphs, first, last);
+            } else 
+            {
+                // set glyphs from argv[4]
+                first = MAX_GLYPHS;
+                last = 0;
+                for (i = 0; i < MAX_GLYPHS; i++) glyphs[i] = false;
+                for (ptr = argv[4]; *ptr; ptr++) 
+                {
+                  i = (int)(*ptr);
+                  if (i < first) 
+                  {
+                    first = i;
+                  }
+                  if (i > last) 
+                  {
+                    last = i;
+                  }
+                  glyphs[i] = true;
+                }
+            }
+            break;
+      default:
+          usage();          
   }
+  
+  std::string fontFile=std::string(argv[1]);
 
-  ptr = strrchr(argv[1], '/'); // Find last slash in filename
-  if (ptr)
-    ptr++; // First character of filename (path stripped)
-  else
-    ptr = argv[1]; // No path; font in local dir.
-
-  // Allocate space for font name and glyph table
-  if ((!(fontName = (char *)malloc(strlen(ptr) + 20))) ||
-      (!(table = (GFXglyph *)malloc((last - first + 1) * sizeof(GFXglyph))))) {
-    fprintf(stderr, "Malloc error\n");
-    return 1;
-  }
-
-  // Derive font table names from filename.  Period (filename
-  // extension) is truncated and replaced with the font size & bits.
-  strcpy(fontName, ptr);
-  ptr = strrchr(fontName, '.'); // Find last period (file ext)
-  if (!ptr)
-    ptr = &fontName[strlen(fontName)]; // If none, append
-  // Insert font size and 7/8 bit.  fontName was alloc'd w/extra
-  // space to allow this, we're not sprintfing into Forbidden Zone.
-  sprintf(ptr, "%dpt%db", size, (last > 127) ? 8 : 7);
-  // Space and punctuation chars in name replaced w/ underscores.
-  for (i = 0; (c = fontName[i]); i++) {
-    if (isspace(c) || ispunct(c))
-      fontName[i] = '_';
-  }
-
+  std::string::size_type const p(fontFile.find_last_of('.'));
+  std::string fontName = fontFile.substr(0, p);
+  
+  printf("Processing font %s\n",fontName.c_str());
+  
+  
   // Init FreeType lib, load font
-  if ((err = FT_Init_FreeType(&library))) {
+  if ((err = FT_Init_FreeType(&library))) 
+  {
     fprintf(stderr, "FreeType init error: %d", err);
     return err;
   }
@@ -155,10 +163,10 @@ int main(int argc, char *argv[]) {
   // support rendering multiple levels of gray in a glyph.
   // See https://github.com/adafruit/Adafruit-GFX-Library/issues/103
   FT_UInt interpreter_version = TT_INTERPRETER_VERSION_35;
-  FT_Property_Set(library, "truetype", "interpreter-version",
-                  &interpreter_version);
+  FT_Property_Set(library, "truetype", "interpreter-version", &interpreter_version);
 
-  if ((err = FT_New_Face(library, argv[1], 0, &face))) {
+  if ((err = FT_New_Face(library, argv[1], 0, &face))) 
+  {
     fprintf(stderr, "Font load error: %d", err);
     FT_Done_FreeType(library);
     return err;
@@ -320,4 +328,3 @@ There's also some changes with regard to 'background' color and new GFX
 fonts (classic fonts unchanged).  See Adafruit_GFX.cpp for explanation.
 */
 
-#endif /* !ARDUINO */
