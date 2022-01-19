@@ -1,4 +1,5 @@
-project(fontconver C)
+cmake_minimum_required(VERSION 3.10)
+project(fontconver C CXX)
 #
 include(FindPkgConfig)
 
@@ -13,6 +14,11 @@ ENDIF (NOT FREETYPE2_FOUND)
 SET(SRCS fontconvert.c)
 include_directories(${FREETYPE2_INCLUDE_DIR})
 ADD_DEFINITIONS(${FREETYPE2_CFLAGS})
-ADD_EXECUTABLE(fontconvert ${SRCS})
 LINK_DIRECTORIES(${FREETYPE2_LIBRARY_DIR})
+
+ADD_EXECUTABLE(fontconvert ${SRCS})
 TARGET_LINK_LIBRARIES(fontconvert  ${FREETYPE2_LIBRARIES})
+
+ADD_EXECUTABLE(flatconvert flatconvert.cpp)
+LINK_DIRECTORIES(${FREETYPE2_LIBRARY_DIR})
+TARGET_LINK_LIBRARIES(flatconvert  ${FREETYPE2_LIBRARIES})
