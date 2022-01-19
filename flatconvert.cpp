@@ -26,6 +26,7 @@ See notes at end for glyph nomenclature & other tidbits.
 #include FT_TRUETYPE_DRIVER_H
 #include "gfxfont.h" // Adafruit_GFX font structures
 #include "string"
+#include "regex"
 
 #define DPI 141 // Approximate res. of Adafruit 2.8" TFT
 const int MAX_GLYPHS = 256;
@@ -99,8 +100,7 @@ int main(int argc, char *argv[])
   
   if (argc < 3) 
   {
-    usage();
-    
+    usage();    
     return 1;
   }
 
@@ -108,6 +108,7 @@ int main(int argc, char *argv[])
 
   switch(argc)
   {
+      case 3: break;
       case 4:
             last = atoi(argv[3]);
             setGlyphs(glyphs, ' ', last);
@@ -143,29 +144,41 @@ int main(int argc, char *argv[])
           usage();          
   }
   
-  std::string fontFile=std::string(argv[1]);
-
-  std::string::size_type const p(fontFile.find_last_of('.'));
-  std::string fontName = fontFile.substr(0, p);
-  
-  printf("Processing font %s\n",fontName.c_str());
-  
-  
   // Init FreeType lib, load font
   if ((err = FT_Init_FreeType(&library))) 
   {
     fprintf(stderr, "FreeType init error: %d", err);
     return err;
   }
-
+  
   // Use TrueType engine version 35, without subpixel rendering.
   // This improves clarity of fonts since this library does not
   // support rendering multiple levels of gray in a glyph.
   // See https://github.com/adafruit/Adafruit-GFX-Library/issues/103
   FT_UInt interpreter_version = TT_INTERPRETER_VERSION_35;
   FT_Property_Set(library, "truetype", "interpreter-version", &interpreter_version);
+  // prepare names
+  
+  std::string fontFile=std::string(argv[1]);
+  
+  std::string fileName = fontFile.substr(fontFile.find_last_of("/\\") + 1);
+  fileName= std::regex_replace(fileName, std::regex(" "), "_");  
+  std::string::size_type const p(fileName.find_last_of('.'));
+  fileName = fileName.substr(0, p);
+  
+  printf("Processing font %s\n",fontFile.c_str());
+  printf("Generating symbol %s\n",fileName.c_str());
+  
+  char ext[16];
+  sprintf(ext, "%dpt%db", size, (last > 127) ? 8 : 7);
+  
+  // full var name
+  std::string fontName=fileName+std::string(ext);
+  
+  
 
-  if ((err = FT_New_Face(library, argv[1], 0, &face))) 
+
+  if ((err = FT_New_Face(library, fontFile.c_str(), 0, &face))) 
   {
     fprintf(stderr, "Font load error: %d", err);
     FT_Done_FreeType(library);
@@ -181,7 +194,7 @@ int main(int argc, char *argv[])
   // the right symbols, and that's not done yet.
   // fprintf(stderr, "%ld glyphs\n", face->num_glyphs);
 
-  printf("const uint8_t %sBitmaps[] PROGMEM = {\n  ", fontName);
+  printf("const uint8_t %sBitmaps[] PROGMEM = {\n  ", fontName.c_str());
 
   // Process glyphs and output huge bitmap data array
   for (i = first, j = 0; i <= last; i++, j++) {
@@ -247,7 +260,7 @@ int main(int argc, char *argv[])
   printf(" };\n\n"); // End bitmap array
 
   // Output glyph attributes table (one per character)
-  printf("const GFXglyph %sGlyphs[] PROGMEM = {\n", fontName);
+  printf("const GFXglyph %sGlyphs[] PROGMEM = {\n", fontName.c_str());
   for (i = first, j = 0; i <= last; i++, j++) {
     printf("  { %5d, %3d, %3d, %3d, %4d, %4d }", table[j].bitmapOffset,
            table[j].width, table[j].height, table[j].xAdvance, table[j].xOffset,
@@ -266,9 +279,9 @@ int main(int argc, char *argv[])
   printf("\n\n");
 
   // Output font structure
-  printf("const GFXfont %s PROGMEM = {\n", fontName);
-  printf("  (uint8_t  *)%sBitmaps,\n", fontName);
-  printf("  (GFXglyph *)%sGlyphs,\n", fontName);
+  printf("const GFXfont %s PROGMEM = {\n", fontName.c_str());
+  printf("  (uint8_t  *)%sBitmaps,\n", fontName.c_str());
+  printf("  (GFXglyph *)%sGlyphs,\n", fontName.c_str());
   if (face->size->metrics.height == 0) {
     // No face height info, assume fixed width and get from a glyph.
     printf("  0x%02X, 0x%02X, %d };\n\n", first, last, table[0].height);
