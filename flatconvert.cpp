@@ -188,7 +188,7 @@ void   FontConverter::printHeader()
    */
 void   FontConverter::printIndex()
 {
-  fprintf(output,"const GFXlyph %sGlyphs[] PROGMEM = {\n", symbolName.c_str());
+  fprintf(output,"const GFXglyph %sGlyphs[] PROGMEM = {\n", symbolName.c_str());
   for(int i = first;i <= last; i++) 
   {
     GFXglyph &glyph=listOfGlyphs[i-first];
@@ -197,6 +197,7 @@ void   FontConverter::printIndex()
            glyph.yOffset);
     fprintf(output,",   // 0x%02X '%c' \n", i,printable(i));
   }
+   fprintf(output,"\n};\n");
 }
 /**
  * 
