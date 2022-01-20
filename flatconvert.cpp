@@ -42,7 +42,7 @@ public:
         bit=7;
         cur=buffer;
     }
-    
+    const uint8_t *data() {return buffer;}
     void addBit(bool onoff)
     {
         if(onoff) acc|=(1<<bit);
@@ -84,6 +84,8 @@ public:
         bool           convert();
         void           printIndex();
         void           printFooter();
+        void           printBitmap();
+        
 protected:
     bool                initFreeType(int size);
    
@@ -248,6 +250,33 @@ void   FontConverter::printIndex()
 /**
  * 
  */
+void FontConverter::printBitmap()
+{
+    
+  printf("const uint8_t %sBitmaps[] PROGMEM = {\n ", symbolName.c_str());
+  bitPusher.align();
+  int sz=bitPusher.offset();
+  const uint8_t *data=bitPusher.data();
+  
+  int tab=0;
+  for(int i=0;i<sz;i++)
+  {
+      printf(" 0x%02X,",data[i]);
+      tab++;
+      if(tab==12)
+      {
+          printf("\n ");
+          tab=0;
+      }
+  }
+
+  printf(" };\n\n"); // End bitmap array
+
+}
+
+/**
+ * 
+ */
 void   FontConverter::printFooter()
 {
   
@@ -344,6 +373,7 @@ int main(int argc, char *argv[])
       printf("Failed to convert\n");
       exit(1);
   }
+  converter->printBitmap();
   converter->printIndex();
   converter->printFooter();
   
