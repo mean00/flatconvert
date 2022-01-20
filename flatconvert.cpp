@@ -16,90 +16,7 @@ Keep 7-bit fonts around as an option in that case, more compact.
 
 See notes at end for glyph nomenclature & other tidbits.
 */
-
-#include <ctype.h>
-#include <ft2build.h>
-#include <stdint.h>
-#include <stdio.h>
-#include FT_GLYPH_H
-#include FT_MODULE_H
-#include FT_TRUETYPE_DRIVER_H
-#include "gfxfont.h" // Adafruit_GFX font structures
-#include "string"
-#include "regex"
-#include "vector"
-
-#define DPI 141 // Approximate res. of Adafruit 2.8" TFT
-/**
- * 
- */
-class BitPusher
-{
-public:
-    BitPusher()
-    {
-        acc=0;
-        bit=7;
-        cur=buffer;
-    }
-    const uint8_t *data() {return buffer;}
-    void addBit(bool onoff)
-    {
-        if(onoff) acc|=(1<<bit);
-        bit--;
-        if(bit<0)
-        {
-            align();
-        }
-    }
-    void    align()
-    {
-        if(bit==7) return;
-        *cur=acc;
-        acc=0;
-        cur++;
-        bit=7;
-    }
-    int  offset()
-    {
-        return (int)(cur-buffer);
-    }
-    int    bit;    
-    int    acc;
-    uint8_t *cur;
-    uint8_t buffer[256*1024];
-};
-
-/**
- * 
- * @param fontFile
- * @param symbolName
- */
-class FontConverter
-{
-public:
-                        FontConverter(const std::string &fontFile, const std::string &symbolName);
-                        ~FontConverter();
-        bool           init(int size,int first, int last);
-        bool           convert();
-        void           printIndex();
-        void           printFooter();
-        void           printBitmap();
-        
-protected:
-    bool                initFreeType(int size);
-   
-    FT_Library          library;
-    FT_Face             face;
-    std::string         fontFile,symbolName;
-    bool                ftInited;
-    int                 first,last;  
-    std::vector<GFXglyph > listOfGlyphs;
-    BitPusher           bitPusher;
-    int                 face_height;
-    
-};
-
+#include "flatconvert.h"
 /**
  * 
  * @param xfontFile
@@ -125,53 +42,55 @@ protected:
  {
      int err;
      FT_Glyph glyph;
+      GFXglyph zeroGlyph= (GFXglyph){0,0,0,0,0,0};
      for(int i=first;i<=last;i++)
      {
-        GFXglyph thisGlyph= (GFXglyph){0,0,0,0,0,0};
-    // MONO renderer provides clean image with perfect crop
-    // (no wasted pixels) via bitmap struct.
-    bool renderingOk=true;
-    if ((err = FT_Load_Char(face, i, FT_LOAD_TARGET_MONO))) {     fprintf(stderr, "Error %d loading char '%c'\n", err, i); renderingOk=false;   }
-    if ((err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_MONO))) {      fprintf(stderr, "Error %d rendering char '%c'\n", err, i);     renderingOk=false;  }
-    if ((err = FT_Get_Glyph(face->glyph, &glyph))) {      fprintf(stderr, "Error %d getting glyph '%c'\n", err, i);    renderingOk=false;    }
+       
+        // MONO renderer provides clean image with perfect crop
+        // (no wasted pixels) via bitmap struct.
+        bool renderingOk=true;
+        if ((err = FT_Load_Char(face, i, FT_LOAD_TARGET_MONO))) {     fprintf(stderr, "Error %d loading char '%c'\n", err, i); renderingOk=false;   }
+        if ((err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_MONO))) {      fprintf(stderr, "Error %d rendering char '%c'\n", err, i);     renderingOk=false;  }
+        if ((err = FT_Get_Glyph(face->glyph, &glyph))) {      fprintf(stderr, "Error %d getting glyph '%c'\n", err, i);    renderingOk=false;    }
 
-    if(!renderingOk)
-    {
-        listOfGlyphs.push_back(thisGlyph);  
-        continue;
-    }
-    FT_Bitmap *bitmap = &face->glyph->bitmap;
-    FT_BitmapGlyphRec *g= (FT_BitmapGlyphRec *)glyph;
+        if(!renderingOk)
+        {
+            listOfGlyphs.push_back(zeroGlyph);  
+            continue;
+        }
+        FT_Bitmap *bitmap = &face->glyph->bitmap;
+        FT_BitmapGlyphRec *g= (FT_BitmapGlyphRec *)glyph;
 
-    // Minimal font and per-glyph information is stored to
-    // reduce flash space requirements.  Glyph bitmaps are
-    // fully bit-packed; no per-scanline pad, though end of
-    // each character may be padded to next byte boundary
-    // when needed.  16-bit offset means 64K max for bitmaps,
-    // code currently doesn't check for overflow.  (Doesn't
-    // check that size & offsets are within bounds either for
-    // that matter...please convert fonts responsibly.)
-    bitPusher.align();
-    thisGlyph.bitmapOffset = bitPusher.offset();
-    thisGlyph.width = bitmap->width;
-    thisGlyph.height = bitmap->rows;
-    thisGlyph.xAdvance = face->glyph->advance.x >> 6;
-    thisGlyph.xOffset = g->left;
-    thisGlyph.yOffset = 1 - g->top;
-    listOfGlyphs.push_back(thisGlyph);
+        // Minimal font and per-glyph information is stored to
+        // reduce flash space requirements.  Glyph bitmaps are
+        // fully bit-packed; no per-scanline pad, though end of
+        // each character may be padded to next byte boundary
+        // when needed.  16-bit offset means 64K max for bitmaps,
+        // code currently doesn't check for overflow.  (Doesn't
+        // check that size & offsets are within bounds either for
+        // that matter...please convert fonts responsibly.)
+        bitPusher.align();
+         GFXglyph thisGlyph;
+        thisGlyph.bitmapOffset = bitPusher.offset();
+        thisGlyph.width = bitmap->width;
+        thisGlyph.height = bitmap->rows;
+        thisGlyph.xAdvance = face->glyph->advance.x >> 6;
+        thisGlyph.xOffset = g->left;
+        thisGlyph.yOffset = 1 - g->top;
+        listOfGlyphs.push_back(thisGlyph);
+
+        for (int y = 0; y < bitmap->rows; y++) 
+        {
+          const uint8_t *line=bitmap->buffer+y * bitmap->pitch;
+          for (int x = 0; x < bitmap->width; x++) 
+          {
+            int byte = x / 8;
+            int bit = 0x80 >> (x & 7);
+            bitPusher.addBit(line[byte] & bit);
+          }
+        }
     
-    for (int y = 0; y < bitmap->rows; y++) 
-    {
-      for (int x = 0; x < bitmap->width; x++) 
-      {
-        int byte = x / 8;
-        int bit = 0x80 >> (x & 7);
-        bitPusher.addBit(bitmap->buffer[y * bitmap->pitch + byte] & bit);
-      }
-    }
-    
-    }
-     
+    }     
     face_height= face->size->metrics.height >> 6;
     FT_Done_Glyph(glyph);  
     return true;
@@ -215,20 +134,30 @@ bool    FontConverter::initFreeType(int size)
  * @param size
  * @return 
  */
-  bool    FontConverter::init(int size, int xfirst, int xlast)
-  {
-      if(!initFreeType(size)) return false;
-      if(xlast>xfirst)          
-      {
-        first=xfirst;
-        last=xlast;
-      }else
-      {
-         first=xlast;
-         last=xfirst ; 
-      }           
-      return true;
-  }
+bool    FontConverter::init(int size, int xfirst, int xlast)
+{
+    if(!initFreeType(size)) return false;
+    if(xlast>xfirst)          
+    {
+      first=xfirst;
+      last=xlast;
+    }else
+    {
+       first=xlast;
+       last=xfirst ; 
+    }           
+    return true;
+}
+  
+/**
+ * 
+ */  
+void   FontConverter::printHeader()  
+{
+    printf("// Generated by flatconvert\n");
+    printf("#pragma once\n");
+}
+  
   /**
    * 
    */
@@ -373,6 +302,7 @@ int main(int argc, char *argv[])
       printf("Failed to convert\n");
       exit(1);
   }
+  converter->printHeader();
   converter->printBitmap();
   converter->printIndex();
   converter->printFooter();
