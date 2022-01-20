@@ -98,5 +98,6 @@ protected:
     std::vector<GFXglyph > listOfGlyphs;
     BitPusher           bitPusher;
     int                 face_height;
+    FILE                *output;
     
 };
