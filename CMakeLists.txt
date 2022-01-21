@@ -21,11 +21,12 @@ ADD_DEFINITIONS("-DCXXOPTS_NO_EXCEPTIONS")
 include_directories(cxxopts/include)
 
 MACRO(GEN target src)
-    ADD_EXECUTABLE(${target} ${src})
+    ADD_EXECUTABLE(${target} ${src} ${ARGN})
     TARGET_LINK_LIBRARIES(${target}  ${FREETYPE2_LIBRARIES} )
 ENDMACRO(GEN target src)
 
 
             
-GEN(fontconvert fontconvert.c)    
-GEN(flatconvert flatconvert.cpp)    
+GEN(fontconvert fontconvert.c )    
+GEN(flatconvert flatconvert.cpp flatconvert_engine.cpp)
+GEN(flatconvert2bits flatconvert2bits.cpp flatconvert_engine.cpp)

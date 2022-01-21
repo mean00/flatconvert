@@ -35,8 +35,8 @@ See notes at end for glyph nomenclature & other tidbits.
         // MONO renderer provides clean image with perfect crop
         // (no wasted pixels) via bitmap struct.
         bool renderingOk=true;
-        if ((err = FT_Load_Char(face, i, FT_LOAD_TARGET_MONO))) {     fprintf(stderr, "Error %d loading char '%c'\n", err, i); renderingOk=false;   }
-        if ((err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_MONO))) {      fprintf(stderr, "Error %d rendering char '%c'\n", err, i);     renderingOk=false;  }
+        if ((err = FT_Load_Char(face, i, FT_LOAD_TARGET_NORMAL))) {     fprintf(stderr, "Error %d loading char '%c'\n", err, i); renderingOk=false;   }
+        if ((err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))) {      fprintf(stderr, "Error %d rendering char '%c'\n", err, i);     renderingOk=false;  }
         if ((err = FT_Get_Glyph(face->glyph, &glyph))) {      fprintf(stderr, "Error %d getting glyph '%c'\n", err, i);    renderingOk=false;    }
 
         if(!renderingOk)
@@ -70,9 +70,7 @@ See notes at end for glyph nomenclature & other tidbits.
           const uint8_t *line=bitmap->buffer+y * bitmap->pitch;
           for (int x = 0; x < bitmap->width; x++) 
           {
-            int byte = x / 8;
-            int bit = 0x80 >> (x & 7);
-            bitPusher.addBit(line[byte] & bit);
+            bitPusher.add2Bits(line[x] >>6);
           }
         }
     
@@ -110,7 +108,6 @@ int main(int argc, char *argv[])
     ("e,end_char",      "last glyph",   cxxopts::value<int>()->default_value("0x7e")) // ~
     ("o,output_file",   "output file",  cxxopts::value<std::string>())
     ("m,bitmap_file",   "bitmap binaryfile",  cxxopts::value<std::string>()->default_value(""))
-  
     ;
    cxxopts::ParseResult result;
    result = options.parse(argc, argv);
@@ -120,7 +117,8 @@ int main(int argc, char *argv[])
    int size=result["size"].as<int>();
    std::string fontFile=result["font"].as<std::string>();
    std::string outputFile=result["output_file"].as<std::string>();
-   std::string bitmapFile=result["bitmap_file"].as<std::string>();  
+   std::string bitmapFile=result["bitmap_file"].as<std::string>();
+  
       
   std::string fileName = fontFile.substr(fontFile.find_last_of("/\\") + 1);
   fileName= std::regex_replace(fileName, std::regex(" "), "_");  
@@ -132,7 +130,7 @@ int main(int argc, char *argv[])
   sprintf(ext, "%dpt%db", size, (last > 127) ? 8 : 7);
   
   // full var name
-  std::string symbolName=fileName+std::string(ext);
+  std::string symbolName=fileName+std::string(ext)+std::string("2b");
 
   if(!outputFile.size())
   {
@@ -162,10 +160,12 @@ int main(int argc, char *argv[])
   converter->printBitmap();
   converter->printIndex();
   converter->printFooter();
+  
   if(bitmapFile.size())
   {
       converter->saveBitmap(bitmapFile.c_str());
-  }  
+  }
+  
   delete converter;
   converter=NULL;  
   printf("Done.\n");

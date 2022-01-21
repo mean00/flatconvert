@@ -43,6 +43,17 @@ public:
         cur=buffer;
     }
     const uint8_t *data() {return buffer;}
+     void add2Bits(int val)
+    {
+        val=val&3;
+        acc|=(val<<(bit-1));
+        bit-=2;
+        if(bit<0)
+        {
+            align();
+        }
+    }
+    
     void addBit(bool onoff)
     {
         if(onoff) acc|=(1<<bit);
@@ -86,6 +97,8 @@ public:
         void           printIndex();
         void           printFooter();
         void           printBitmap();
+ static char           printable(int c);
+        bool           saveBitmap(const char *bitmap);
         
 protected:
     bool                initFreeType(int size);
