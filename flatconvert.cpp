@@ -36,7 +36,7 @@ void usage()
  */
 int main(int argc, char *argv[]) 
 {
-    printf("Usage:  flatconver -s size -f fontToUse (-o output file] [-b first char] [-e last char]\n");
+    printf("Usage:  flatconver -s size -f fontToUse (-o output file] [-b first char] [-e last char] [-p bpp (1 or 4)] [-c heatshrink compress]\n");
     
     cxxopts::Options options("fatconvert", "cleaner version of adafruit fontconvert, ttf to GFXfont");
   
