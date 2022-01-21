@@ -17,14 +17,13 @@ Keep 7-bit fonts around as an option in that case, more compact.
 See notes at end for glyph nomenclature & other tidbits.
 */
 #include "flatconvert.h"
-#include "cxxopts.hpp"
 extern "C"
 {
 #include "heatshrink_encoder.h"
 }
 /**
- * 
- * @return 
+ *
+ * @return
  */
  bool FontConverter::compress()
  {
@@ -33,7 +32,7 @@ extern "C"
      bitPusher.align();
      const uint8_t *src=bitPusher.data();
      int     size=bitPusher.offset();
-     
+
      heatshrink_encoder *hse = heatshrink_encoder_alloc(8, 4);
      if(!hse)
      {
@@ -44,7 +43,7 @@ extern "C"
     size_t count=0;
     size_t polled = 0;
     size_t comp_sz=FC_BUFFER_SIZE;
-    while (sunk < size) 
+    while (sunk < size)
     {
         HSE_sink_res esres = heatshrink_encoder_sink(hse, (uint8_t *)(src+sunk), size - sunk, &count);
         if(esres <0)
@@ -53,8 +52,8 @@ extern "C"
             exit(-1);
         }
         sunk += count;
-        
-        if (sunk == size) 
+
+        if (sunk == size)
         {
             if(HSER_FINISH_MORE!= heatshrink_encoder_finish(hse))
             {
@@ -64,7 +63,7 @@ extern "C"
         }
 
         HSE_poll_res pres;
-        do 
+        do
         {
             pres = heatshrink_encoder_poll(hse, &tmp[polled], comp_sz - polled, &count);
             polled += count;
@@ -74,13 +73,13 @@ extern "C"
             printf("Poll fail\n");
             exit(-1);
         }
-        if (polled >= comp_sz) 
+        if (polled >= comp_sz)
         {
             printf("compression overflow\n");
             exit(-1);
         }
 
-        if (sunk == size) 
+        if (sunk == size)
         {
             if(HSER_FINISH_DONE!= heatshrink_encoder_finish(hse))
              {
@@ -96,6 +95,5 @@ extern "C"
     bitPusher.swallow(polled,tmp);
     heatshrink_encoder_free(hse);
     hse=NULL;
-    return true;     
+    return true;
  }
-  
