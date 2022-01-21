@@ -3,7 +3,7 @@ which is itself a fork of adafruit font convert
 
 The code has been cleaned up 
 
-flatconvert fontfile size [[firstChar]] [[lastChar]]
+flatconvert -f fontfile -s size -o outputfile [[-b firstChar]] [[-e lastChar]]  [[-m bitmapfile]]
 
 to build:
 
