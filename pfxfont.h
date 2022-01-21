@@ -27,4 +27,7 @@ typedef struct {
   uint8_t shrinked; ///< compressed ?
 } PFXfont;
 
+#define GFXfont PFXfont // compatibility
+#define GFXglyph PFXglyph // compatibility
+
 
