@@ -78,7 +78,7 @@ public:
 class FontConverter
 {
 public:
-                        FontConverter(const std::string &fontFile, const std::string &symbolName);
+                        FontConverter(const std::string &fontFile, const std::string &symbolName, const std::string &outputFile);
                         ~FontConverter();
         bool           init(int size,int first, int last);
         bool           convert();
@@ -92,7 +92,7 @@ protected:
    
     FT_Library          library;
     FT_Face             face;
-    std::string         fontFile,symbolName;
+    std::string         fontFile,symbolName,outputFile;
     bool                ftInited;
     int                 first,last;  
     std::vector<GFXglyph > listOfGlyphs;

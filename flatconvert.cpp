@@ -17,15 +17,17 @@ Keep 7-bit fonts around as an option in that case, more compact.
 See notes at end for glyph nomenclature & other tidbits.
 */
 #include "flatconvert.h"
+#include "cxxopts.hpp"
 /**
  * 
  * @param xfontFile
  * @param xsymbolName
  */
- FontConverter::FontConverter(const std::string &xfontFile, const std::string &xsymbolName)
+ FontConverter::FontConverter(const std::string &xfontFile, const std::string &xsymbolName,const std::string &xoutputFile)
  {
     fontFile=xfontFile;
     symbolName=xsymbolName;
+    outputFile=xoutputFile;
     ftInited=false;    
     face_height=0;
     output=NULL;
@@ -162,8 +164,7 @@ bool    FontConverter::init(int size, int xfirst, int xlast)
     {
        first=xlast;
        last=xfirst ; 
-    }           
-    std::string outputFile=symbolName+std::string(".h");
+    }               
     output=fopen(outputFile.c_str(),"wb");
     if(!output)
     {
@@ -259,7 +260,7 @@ void   FontConverter::printFooter()
  */
 void usage()
 {
-    fprintf(stderr, "Usage:  fontfile size [first] [last]\n");
+    
     exit(1);
 }
 
@@ -271,34 +272,27 @@ void usage()
  */
 int main(int argc, char *argv[]) 
 {
- 
-  if (argc < 3) 
-  {
-    usage();    
-    return 1;
-  }
-
-  int size = atoi(argv[2]);
-  int first,last;
-
-  first=' ';
-  last='~';
-  switch(argc)
-  {
-      case 3: break;
-      case 4:
-            last = atoi(argv[3]);
-            break;
-      case 5:
-            first = atoi(argv[3]);
-            last = atoi(argv[4]);
-            break;
-      default:
-          usage();          
-  }
- 
+    printf("Usage:  flatconver -s size -f fontToUse (-o output file] [-b first char] [-e last char]\n");
+    
+    cxxopts::Options options("fatconvert", "cleaner version of adafruit fontconvert, ttf to GFXfont");
   
-  std::string fontFile=std::string(argv[1]);  
+  options.add_options()
+    ("f,font",          "font to use",  cxxopts::value<std::string>()) // a bool parameter
+    ("s,size",          "font size",    cxxopts::value<int>())
+    ("b,begin_char",    "first glyph",  cxxopts::value<int>()->default_value("32"))
+    ("e,end_char",      "last glyph",   cxxopts::value<int>()->default_value("0x7e")) // ~
+    ("o,output_file",   "output file",  cxxopts::value<std::string>())
+    ;
+   cxxopts::ParseResult result;
+   result = options.parse(argc, argv);
+   
+   int first = result["begin_char"].as<int>();
+   int last = result["end_char"].as<int>();
+   int size=result["size"].as<int>();
+   std::string fontFile=result["font"].as<std::string>();
+   std::string outputFile=result["output_file"].as<std::string>();
+  
+      
   std::string fileName = fontFile.substr(fontFile.find_last_of("/\\") + 1);
   fileName= std::regex_replace(fileName, std::regex(" "), "_");  
   std::string::size_type const p(fileName.find_last_of('.'));
@@ -310,14 +304,20 @@ int main(int argc, char *argv[])
   
   // full var name
   std::string symbolName=fileName+std::string(ext);
+
+  if(!outputFile.size())
+  {
+      outputFile=symbolName+std::string(".h");
+  }
+  
   
   printf("Processing font %s\n",fontFile.c_str());
   printf("Generating symbol %s\n",symbolName.c_str());
-  printf("Writing  %s.h\n",symbolName.c_str());
+  printf("Writing file %s\n",outputFile.c_str());
   printf("First glyph  : %d '%c'\n",first,printable(first));
   printf("Last glyph   : %d '%c'\n",last,printable(last));
 
-  FontConverter *converter=new FontConverter(fontFile,symbolName);
+  FontConverter *converter=new FontConverter(fontFile,symbolName,outputFile);
   
   if(!converter->init(size,first,last))
   {

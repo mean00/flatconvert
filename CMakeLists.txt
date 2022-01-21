@@ -16,10 +16,16 @@ include_directories(${FREETYPE2_INCLUDE_DIR})
 ADD_DEFINITIONS(${FREETYPE2_CFLAGS})
 LINK_DIRECTORIES(${FREETYPE2_LIBRARY_DIR})
 
+ADD_DEFINITIONS("-DCXXOPTS_NO_EXCEPTIONS")
+
+include_directories(cxxopts/include)
+
 MACRO(GEN target src)
     ADD_EXECUTABLE(${target} ${src})
-    TARGET_LINK_LIBRARIES(${target}  ${FREETYPE2_LIBRARIES})
+    TARGET_LINK_LIBRARIES(${target}  ${FREETYPE2_LIBRARIES} )
 ENDMACRO(GEN target src)
 
+
+            
 GEN(fontconvert fontconvert.c)    
 GEN(flatconvert flatconvert.cpp)    
