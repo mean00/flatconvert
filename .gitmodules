@@ -1,3 +1,6 @@
 [submodule "cxxopts"]
 	path = cxxopts
 	url = https://github.com/jarro2783/cxxopts.git
+[submodule "hs/heatshrink"]
+	path = hs/heatshrink
+	url = https://github.com/atomicobject/heatshrink.git

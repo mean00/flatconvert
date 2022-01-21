@@ -28,7 +28,7 @@ See notes at end for glyph nomenclature & other tidbits.
  {
      int err;
      FT_Glyph glyph;
-      GFXglyph zeroGlyph= (GFXglyph){0,0,0,0,0,0};
+      PFXglyph zeroGlyph= (PFXglyph){0,0,0,0,0,0};
      for(int i=first;i<=last;i++)
      {
        
@@ -56,7 +56,7 @@ See notes at end for glyph nomenclature & other tidbits.
         // check that size & offsets are within bounds either for
         // that matter...please convert fonts responsibly.)
         bitPusher.align();
-         GFXglyph thisGlyph;
+        PFXglyph thisGlyph;
         thisGlyph.bitmapOffset = bitPusher.offset();
         thisGlyph.width = bitmap->width;
         thisGlyph.height = bitmap->rows;

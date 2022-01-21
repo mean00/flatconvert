@@ -24,7 +24,7 @@ See notes at end for glyph nomenclature & other tidbits.
 #include FT_GLYPH_H
 #include FT_MODULE_H
 #include FT_TRUETYPE_DRIVER_H
-#include "gfxfont.h" // Adafruit_GFX font structures
+#include "pfxfont.h" // Adafruit_GFX font structures
 #include "string"
 #include "regex"
 #include "vector"
@@ -43,7 +43,23 @@ public:
         cur=buffer;
     }
     const uint8_t *data() {return buffer;}
-     void add2Bits(int val)
+    void add8Bits(int val)
+    {
+       *cur++=val;
+    }
+    void add4Bits(int val)
+    {
+        if(bit==7)
+        {
+            acc|=(val<<4);
+            bit-=4;
+        }else
+        {
+            acc|=val&0xf;
+            align();
+        }
+    }
+    void add2Bits(int val)
     {
         val=val&3;
         acc|=(val<<(bit-1));
@@ -91,7 +107,7 @@ class FontConverter
 public:
                         FontConverter(const std::string &fontFile, const std::string &symbolName, const std::string &outputFile);
                         ~FontConverter();
-        bool           init(int size,int first, int last);
+        bool           init(int size,int bpp, int first, int last);
         bool           convert();
         void           printHeader();
         void           printIndex();
@@ -102,13 +118,15 @@ public:
         
 protected:
     bool                initFreeType(int size);
-   
+    bool                convert1bit();
+    bool                convert4bit();
     FT_Library          library;
     FT_Face             face;
     std::string         fontFile,symbolName,outputFile;
     bool                ftInited;
-    int                 first,last;  
-    std::vector<GFXglyph > listOfGlyphs;
+    int                 first,last,bpp;  
+    bool                compressed;
+    std::vector<PFXglyph > listOfGlyphs;
     BitPusher           bitPusher;
     int                 face_height;
     FILE                *output;

@@ -31,6 +31,7 @@ See notes at end for glyph nomenclature & other tidbits.
     ftInited=false;    
     face_height=0;
     output=NULL;
+    compressed=false;
  }
  FontConverter::~FontConverter()
  {
@@ -92,8 +93,9 @@ bool    FontConverter::initFreeType(int size)
  * @param size
  * @return 
  */
-bool    FontConverter::init(int size, int xfirst, int xlast)
+bool    FontConverter::init(int size, int bpp,int xfirst, int xlast)
 {
+    this->bpp=bpp;
     if(!initFreeType(size)) return false;
     if(xlast>xfirst)          
     {
@@ -128,13 +130,17 @@ void   FontConverter::printHeader()
    */
 void   FontConverter::printIndex()
 {
-  fprintf(output,"const GFXglyph %sGlyphs[] PROGMEM = {\n", symbolName.c_str());
+  fprintf(output,"const PFXglyph %sGlyphs[] PROGMEM = {\n", symbolName.c_str());
   for(int i = first;i <= last; i++) 
   {
-    GFXglyph &glyph=listOfGlyphs[i-first];
-    fprintf(output,"  { %5d, %3d, %3d, %3d, %4d, %4d }", glyph.bitmapOffset,
-           glyph.width, glyph.height, glyph.xAdvance, glyph.xOffset,
-           glyph.yOffset);
+    PFXglyph &glyph=listOfGlyphs[i-first];
+    fprintf(output,"  { %5d, %3d, %3d, %3d, %4d, %4d}", 
+           glyph.bitmapOffset,
+           glyph.width, 
+           glyph.height, 
+           glyph.xAdvance, 
+           glyph.xOffset,
+           (int)glyph.yOffset);
     fprintf(output,",   // 0x%02X '%c' \n", i,printable(i));
   }
    fprintf(output,"\n};\n");
@@ -190,23 +196,160 @@ void   FontConverter::printFooter()
 {
   
   // Output font structure
-  fprintf(output,"const GFXfont %s PROGMEM = {\n", symbolName.c_str());
+  fprintf(output,"const PFXfont %s PROGMEM = {\n", symbolName.c_str());
   fprintf(output,"  (uint8_t  *)%sBitmaps,\n", symbolName.c_str());
-  fprintf(output,"  (GFXglyph *)%sGlyphs,\n", symbolName.c_str());
+  fprintf(output,"  (PFXglyph *)%sGlyphs,\n", symbolName.c_str());
   if(!face_height) 
   {  // No face height info, assume fixed width and get from a glyph.  
-    fprintf(output,"  0x%02X, 0x%02X, %d };\n\n", first, last, listOfGlyphs[0].height);
+    fprintf(output,"  0x%02X, 0x%02X, %d,\n" , first, last, listOfGlyphs[0].height);
   } 
   else 
   {
-    fprintf(output,"  0x%02X, 0x%02X, %d };\n\n", first, last, face_height);
+    fprintf(output,"  0x%02X, 0x%02X, %d ", first, last, face_height);
   }
-    
+  fprintf(output,"\n  %1d,%1d}; // bit per pixel, compression \n\n",bpp,(int)compressed);
   int sz=bitPusher.offset();
   fprintf(output,"// Bitmap : about %d bytes (%d kBytes)\n",sz,(sz+1023)/1024);
-  sz=(last-first+1)*sizeof(GFXglyph);
+  sz=(last-first+1)*sizeof(PFXglyph);
   fprintf(output,"// Header : about %d bytes (%d kBytes)\n",sz,(sz+1023)/1024);
-  sz+=bitPusher.offset()+sizeof(GFXfont);
+  sz+=bitPusher.offset()+sizeof(PFXfont);
   fprintf(output,"//--------------------------------------\n");
   fprintf(output,"// total : about %d bytes (%d kBytes)\n",sz,(sz+1023)/1024);
 }
+
+
+bool  FontConverter::convert()
+{
+    switch(bpp)
+    {
+        case 1: return convert1bit();break;
+        case 4: return convert4bit();break;
+        default:
+            printf("Unsupported bpp, only 1 or 4");
+            break;
+    }
+    return false;
+}
+ /**
+  * 
+  * @return 
+  */
+ bool FontConverter::convert4bit()
+ {
+     int err;
+     FT_Glyph glyph;
+     PFXglyph zeroGlyph= (PFXglyph){0,0,0,0,0,0};
+     for(int i=first;i<=last;i++)
+     {
+       
+        // MONO renderer provides clean image with perfect crop
+        // (no wasted pixels) via bitmap struct.
+        bool renderingOk=true;
+        if ((err = FT_Load_Char(face, i, FT_LOAD_TARGET_NORMAL))) {     fprintf(stderr, "Error %d loading char '%c'\n", err, i); renderingOk=false;   }
+        if ((err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))) {      fprintf(stderr, "Error %d rendering char '%c'\n", err, i);     renderingOk=false;  }
+        if ((err = FT_Get_Glyph(face->glyph, &glyph))) {      fprintf(stderr, "Error %d getting glyph '%c'\n", err, i);    renderingOk=false;    }
+
+        if(!renderingOk)
+        {
+            listOfGlyphs.push_back(zeroGlyph);  
+            continue;
+        }
+        FT_Bitmap *bitmap = &face->glyph->bitmap;
+        FT_BitmapGlyphRec *g= (FT_BitmapGlyphRec *)glyph;
+
+        // Minimal font and per-glyph information is stored to
+        // reduce flash space requirements.  Glyph bitmaps are
+        // fully bit-packed; no per-scanline pad, though end of
+        // each character may be padded to next byte boundary
+        // when needed.  16-bit offset means 64K max for bitmaps,
+        // code currently doesn't check for overflow.  (Doesn't
+        // check that size & offsets are within bounds either for
+        // that matter...please convert fonts responsibly.)
+        bitPusher.align();
+        PFXglyph thisGlyph;
+        thisGlyph.bitmapOffset = bitPusher.offset();
+        thisGlyph.width = bitmap->width;
+        thisGlyph.height = bitmap->rows;
+        thisGlyph.xAdvance = face->glyph->advance.x >> 6;
+        thisGlyph.xOffset = g->left;
+        thisGlyph.yOffset = 1 - g->top;
+        listOfGlyphs.push_back(thisGlyph);
+
+        for (int y = 0; y < bitmap->rows; y++) 
+        {
+          const uint8_t *line=bitmap->buffer+y * bitmap->pitch;
+          for (int x = 0; x < bitmap->width; x++) 
+          {
+            bitPusher.add4Bits(line[x]>>4);
+          }
+        }
+    
+    }     
+    face_height= face->size->metrics.height >> 6;
+    FT_Done_Glyph(glyph);  
+    return true;
+ }
+ 
+ 
+ /**
+  * 
+  * @return 
+  */
+ bool FontConverter::convert1bit()
+ {
+     int err;
+     FT_Glyph glyph;
+     PFXglyph zeroGlyph= (PFXglyph){0,0,0,0,0,0};
+     for(int i=first;i<=last;i++)
+     {
+       
+        // MONO renderer provides clean image with perfect crop
+        // (no wasted pixels) via bitmap struct.
+        bool renderingOk=true;
+        if ((err = FT_Load_Char(face, i, FT_LOAD_TARGET_MONO))) {     fprintf(stderr, "Error %d loading char '%c'\n", err, i); renderingOk=false;   }
+        if ((err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_MONO))) {      fprintf(stderr, "Error %d rendering char '%c'\n", err, i);     renderingOk=false;  }
+        if ((err = FT_Get_Glyph(face->glyph, &glyph))) {      fprintf(stderr, "Error %d getting glyph '%c'\n", err, i);    renderingOk=false;    }
+
+        if(!renderingOk)
+        {
+            listOfGlyphs.push_back(zeroGlyph);  
+            continue;
+        }
+        FT_Bitmap *bitmap = &face->glyph->bitmap;
+        FT_BitmapGlyphRec *g= (FT_BitmapGlyphRec *)glyph;
+
+        // Minimal font and per-glyph information is stored to
+        // reduce flash space requirements.  Glyph bitmaps are
+        // fully bit-packed; no per-scanline pad, though end of
+        // each character may be padded to next byte boundary
+        // when needed.  16-bit offset means 64K max for bitmaps,
+        // code currently doesn't check for overflow.  (Doesn't
+        // check that size & offsets are within bounds either for
+        // that matter...please convert fonts responsibly.)
+        bitPusher.align();
+        PFXglyph thisGlyph;
+        thisGlyph.bitmapOffset = bitPusher.offset();
+        thisGlyph.width = bitmap->width;
+        thisGlyph.height = bitmap->rows;
+        thisGlyph.xAdvance = face->glyph->advance.x >> 6;
+        thisGlyph.xOffset = g->left;
+        thisGlyph.yOffset = 1 - g->top;
+        listOfGlyphs.push_back(thisGlyph);
+
+        for (int y = 0; y < bitmap->rows; y++) 
+        {
+          const uint8_t *line=bitmap->buffer+y * bitmap->pitch;
+          for (int x = 0; x < bitmap->width; x++) 
+          {
+            int byte = x / 8;
+            int bit = 0x80 >> (x & 7);
+            bitPusher.addBit(line[byte] & bit);
+          }
+        }
+    
+    }     
+    face_height= face->size->metrics.height >> 6;
+    FT_Done_Glyph(glyph);  
+    return true;
+ }
+ 

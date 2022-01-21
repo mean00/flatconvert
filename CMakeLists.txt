@@ -9,7 +9,8 @@ PKG_CHECK_MODULES(FREETYPE2 freetype2)
 IF (NOT FREETYPE2_FOUND)
     MESSAGE(FATAL_ERROR "Cannot find freetype 2")
 ENDIF (NOT FREETYPE2_FOUND)
-
+#
+add_subdirectory(hs)
 #
 SET(SRCS fontconvert.c)
 include_directories(${FREETYPE2_INCLUDE_DIR})
@@ -20,13 +21,16 @@ ADD_DEFINITIONS("-DCXXOPTS_NO_EXCEPTIONS")
 
 include_directories(cxxopts/include)
 
+
+
 MACRO(GEN target src)
     ADD_EXECUTABLE(${target} ${src} ${ARGN})
-    TARGET_LINK_LIBRARIES(${target}  ${FREETYPE2_LIBRARIES} )
+    TARGET_LINK_LIBRARIES(${target}  ${FREETYPE2_LIBRARIES} hs )
 ENDMACRO(GEN target src)
 
 
             
-GEN(fontconvert fontconvert.c )    
+#GEN(fontconvert fontconvert.c )    
 GEN(flatconvert flatconvert.cpp flatconvert_engine.cpp)
-GEN(flatconvert2bits flatconvert2bits.cpp flatconvert_engine.cpp)
+#GEN(flatconvert2bits flatconvert2bits.cpp flatconvert_engine.cpp)
+#GEN(flatconvert4bits flatconvert4bits.cpp flatconvert_engine.cpp)

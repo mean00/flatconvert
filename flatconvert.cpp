@@ -19,69 +19,6 @@ See notes at end for glyph nomenclature & other tidbits.
 #include "flatconvert.h"
 #include "cxxopts.hpp"
 
- 
- /**
-  * 
-  * @return 
-  */
- bool FontConverter::convert()
- {
-     int err;
-     FT_Glyph glyph;
-      GFXglyph zeroGlyph= (GFXglyph){0,0,0,0,0,0};
-     for(int i=first;i<=last;i++)
-     {
-       
-        // MONO renderer provides clean image with perfect crop
-        // (no wasted pixels) via bitmap struct.
-        bool renderingOk=true;
-        if ((err = FT_Load_Char(face, i, FT_LOAD_TARGET_MONO))) {     fprintf(stderr, "Error %d loading char '%c'\n", err, i); renderingOk=false;   }
-        if ((err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_MONO))) {      fprintf(stderr, "Error %d rendering char '%c'\n", err, i);     renderingOk=false;  }
-        if ((err = FT_Get_Glyph(face->glyph, &glyph))) {      fprintf(stderr, "Error %d getting glyph '%c'\n", err, i);    renderingOk=false;    }
-
-        if(!renderingOk)
-        {
-            listOfGlyphs.push_back(zeroGlyph);  
-            continue;
-        }
-        FT_Bitmap *bitmap = &face->glyph->bitmap;
-        FT_BitmapGlyphRec *g= (FT_BitmapGlyphRec *)glyph;
-
-        // Minimal font and per-glyph information is stored to
-        // reduce flash space requirements.  Glyph bitmaps are
-        // fully bit-packed; no per-scanline pad, though end of
-        // each character may be padded to next byte boundary
-        // when needed.  16-bit offset means 64K max for bitmaps,
-        // code currently doesn't check for overflow.  (Doesn't
-        // check that size & offsets are within bounds either for
-        // that matter...please convert fonts responsibly.)
-        bitPusher.align();
-         GFXglyph thisGlyph;
-        thisGlyph.bitmapOffset = bitPusher.offset();
-        thisGlyph.width = bitmap->width;
-        thisGlyph.height = bitmap->rows;
-        thisGlyph.xAdvance = face->glyph->advance.x >> 6;
-        thisGlyph.xOffset = g->left;
-        thisGlyph.yOffset = 1 - g->top;
-        listOfGlyphs.push_back(thisGlyph);
-
-        for (int y = 0; y < bitmap->rows; y++) 
-        {
-          const uint8_t *line=bitmap->buffer+y * bitmap->pitch;
-          for (int x = 0; x < bitmap->width; x++) 
-          {
-            int byte = x / 8;
-            int bit = 0x80 >> (x & 7);
-            bitPusher.addBit(line[byte] & bit);
-          }
-        }
-    
-    }     
-    face_height= face->size->metrics.height >> 6;
-    FT_Done_Glyph(glyph);  
-    return true;
- }
- 
 /**
  * 
  */
@@ -110,6 +47,7 @@ int main(int argc, char *argv[])
     ("e,end_char",      "last glyph",   cxxopts::value<int>()->default_value("0x7e")) // ~
     ("o,output_file",   "output file",  cxxopts::value<std::string>())
     ("m,bitmap_file",   "bitmap binaryfile",  cxxopts::value<std::string>()->default_value(""))
+    ("p,bpp",           "bit per pixel (1 or 4)",  cxxopts::value<int>()->default_value("1"))
   
     ;
    cxxopts::ParseResult result;
@@ -118,6 +56,7 @@ int main(int argc, char *argv[])
    int first = result["begin_char"].as<int>();
    int last = result["end_char"].as<int>();
    int size=result["size"].as<int>();
+   int bpp=result["bpp"].as<int>();
    std::string fontFile=result["font"].as<std::string>();
    std::string outputFile=result["output_file"].as<std::string>();
    std::string bitmapFile=result["bitmap_file"].as<std::string>();  
@@ -148,7 +87,7 @@ int main(int argc, char *argv[])
 
   FontConverter *converter=new FontConverter(fontFile,symbolName,outputFile);
   
-  if(!converter->init(size,first,last))
+  if(!converter->init(size,bpp,first,last))
   {
       printf("Failed to init converter\n");
       exit(1);
