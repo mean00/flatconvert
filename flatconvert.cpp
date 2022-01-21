@@ -48,6 +48,7 @@ int main(int argc, char *argv[])
     ("o,output_file",   "output file",  cxxopts::value<std::string>())
     ("m,bitmap_file",   "bitmap binaryfile",  cxxopts::value<std::string>()->default_value(""))
     ("p,bpp",           "bit per pixel (1 or 4)",  cxxopts::value<int>()->default_value("1"))
+    ("c,compression",   "compress with heatshrink",  cxxopts::value<bool>()->default_value("false"))
   
     ;
    cxxopts::ParseResult result;
@@ -60,6 +61,7 @@ int main(int argc, char *argv[])
    std::string fontFile=result["font"].as<std::string>();
    std::string outputFile=result["output_file"].as<std::string>();
    std::string bitmapFile=result["bitmap_file"].as<std::string>();  
+   bool compression=result["compression"].as<bool>();  
       
   std::string fileName = fontFile.substr(fontFile.find_last_of("/\\") + 1);
   fileName= std::regex_replace(fileName, std::regex(" "), "_");  
@@ -97,6 +99,10 @@ int main(int argc, char *argv[])
       printf("Failed to convert\n");
       exit(1);
   }
+  if(compression)
+  {
+      converter->compress();
+  }
   converter->printHeader();
   converter->printBitmap();
   converter->printIndex();
@@ -107,7 +113,7 @@ int main(int argc, char *argv[])
   }  
   delete converter;
   converter=NULL;  
-  printf("Done.\n");
+  printf("\nDone.\n");
   return 0;
 }
 

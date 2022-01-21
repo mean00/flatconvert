@@ -18,8 +18,10 @@ ADD_DEFINITIONS(${FREETYPE2_CFLAGS})
 LINK_DIRECTORIES(${FREETYPE2_LIBRARY_DIR})
 
 ADD_DEFINITIONS("-DCXXOPTS_NO_EXCEPTIONS")
+ADD_DEFINITIONS("-g3 -o0")
 
 include_directories(cxxopts/include)
+include_directories(hs/heatshrink)
 
 
 
@@ -31,6 +33,4 @@ ENDMACRO(GEN target src)
 
             
 #GEN(fontconvert fontconvert.c )    
-GEN(flatconvert flatconvert.cpp flatconvert_engine.cpp)
-#GEN(flatconvert2bits flatconvert2bits.cpp flatconvert_engine.cpp)
-#GEN(flatconvert4bits flatconvert4bits.cpp flatconvert_engine.cpp)
+GEN(flatconvert flatconvert.cpp flatconvert_engine.cpp flatconvert_compression.cpp)

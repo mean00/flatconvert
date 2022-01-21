@@ -18,6 +18,7 @@ See notes at end for glyph nomenclature & other tidbits.
 */
 #include "flatconvert.h"
 #include "cxxopts.hpp"
+
 /**
  * 
  * @param xfontFile
@@ -289,6 +290,7 @@ bool  FontConverter::convert()
     FT_Done_Glyph(glyph);  
     return true;
  }
+ 
  
  
  /**

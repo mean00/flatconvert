@@ -28,7 +28,7 @@ See notes at end for glyph nomenclature & other tidbits.
 #include "string"
 #include "regex"
 #include "vector"
-
+#define FC_BUFFER_SIZE (256*1024)
 #define DPI 141 // Approximate res. of Adafruit 2.8" TFT
 /**
  * 
@@ -43,6 +43,13 @@ public:
         cur=buffer;
     }
     const uint8_t *data() {return buffer;}
+    void swallow(int nb, const uint8_t *d)
+    {
+        memcpy(buffer,d,nb);
+        cur=buffer+nb;
+        bit=7;
+        acc=0;
+    }
     void add8Bits(int val)
     {
        *cur++=val;
@@ -94,7 +101,7 @@ public:
     int    bit;    
     int    acc;
     uint8_t *cur;
-    uint8_t buffer[256*1024];
+    uint8_t buffer[FC_BUFFER_SIZE];
 };
 
 /**
@@ -102,6 +109,7 @@ public:
  * @param fontFile
  * @param symbolName
  */
+
 class FontConverter
 {
 public:
@@ -113,6 +121,7 @@ public:
         void           printIndex();
         void           printFooter();
         void           printBitmap();
+        bool           compress();
  static char           printable(int c);
         bool           saveBitmap(const char *bitmap);
         
