@@ -98,6 +98,10 @@ public:
     {
         return (int)(cur-buffer);
     }
+    void setOffset(int of)
+    {
+        cur=buffer+of;
+    }
     int    bit;    
     int    acc;
     uint8_t *cur;
@@ -115,13 +119,14 @@ class FontConverter
 public:
                         FontConverter(const std::string &fontFile, const std::string &symbolName, const std::string &outputFile);
                         ~FontConverter();
+        bool           enableCompression() {compressed=true;return true;}
         bool           init(int size,int bpp, int first, int last);
         bool           convert();
         void           printHeader();
         void           printIndex();
         void           printFooter();
         void           printBitmap();
-        bool           compress();
+        bool           compressInPlace(uint8_t *in, int &inoutSize);
  static char           printable(int c);
         bool           saveBitmap(const char *bitmap);
         

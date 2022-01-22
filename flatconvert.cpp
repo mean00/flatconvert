@@ -94,15 +94,17 @@ int main(int argc, char *argv[])
       printf("Failed to init converter\n");
       exit(1);
   }
+  if(compression)
+  {
+      printf("Enabling compression\n");
+      converter->enableCompression();
+  }
+  
   if(!converter->convert())
   {
       printf("Failed to convert\n");
       exit(1);
-  }
-  if(compression)
-  {
-      converter->compress();
-  }
+  } 
   converter->printHeader();
   converter->printBitmap();
   converter->printIndex();

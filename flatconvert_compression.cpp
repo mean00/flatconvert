@@ -25,13 +25,13 @@ extern "C"
  *
  * @return
  */
- bool FontConverter::compress()
+ bool FontConverter::compressInPlace(uint8_t *in, int &inoutSize)
  {
      uint8_t tmp[FC_BUFFER_SIZE];
-     printf("Compressing...\n");
+     //printf("Compressing...\n");
      bitPusher.align();
-     const uint8_t *src=bitPusher.data();
-     int     size=bitPusher.offset();
+     const uint8_t *src=in;
+     int     size=inoutSize;
 
      heatshrink_encoder *hse = heatshrink_encoder_alloc(8, 4);
      if(!hse)
@@ -88,12 +88,12 @@ extern "C"
             }
         }
     }
-    printf("Input size =%d, output size=%d\n",(int)size,(int)polled);
-    printf("Shrinked to %d %%\n",(int)((polled*100)/size));
-    this->compressed=true;
+    //printf("Input size =%d, output size=%d\n",(int)size,(int)polled);
+    //printf("Shrinked to %d %%\n",(int)((polled*100)/size));    
     // copy tmp to bitPusher
-    bitPusher.swallow(polled,tmp);
     heatshrink_encoder_free(hse);
     hse=NULL;
+    memcpy(in,tmp,polled);
+    inoutSize=polled;
     return true;
  }

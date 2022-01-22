@@ -239,7 +239,7 @@ bool  FontConverter::convert()
  {
      int err;
      FT_Glyph glyph;
-     PFXglyph zeroGlyph= (PFXglyph){0,0,0,0,0,0};
+     PFXglyph zeroGlyph= (PFXglyph){0,0,0,0,0,0};     
      for(int i=first;i<=last;i++)
      {
 
@@ -329,6 +329,9 @@ bool  FontConverter::convert()
         // check that size & offsets are within bounds either for
         // that matter...please convert fonts responsibly.)
         bitPusher.align();
+        int startOffset=bitPusher.offset();
+        
+        
         PFXglyph thisGlyph;
         thisGlyph.bitmapOffset = bitPusher.offset();
         thisGlyph.width = bitmap->width;
@@ -348,7 +351,13 @@ bool  FontConverter::convert()
             bitPusher.addBit(line[byte] & bit);
           }
         }
-
+        if(compressed)
+        {
+            bitPusher.align();
+            int size=bitPusher.offset()-startOffset;
+            compressInPlace((uint8_t *)(bitPusher.data()+startOffset),size);
+            bitPusher.setOffset(startOffset+size);
+        }
     }
     face_height= face->size->metrics.height >> 6;
     FT_Done_Glyph(glyph);
