@@ -224,9 +224,9 @@ bool  FontConverter::convert()
     switch(bpp)
     {
         case 1: return convert1bit();break;
-        case 2: return convert2bit();break;
-        case 4: return convert4bit();break;
-        case 8: return convert8bit();break;
+        case 4:
+        case 8:
+        case 2: return convertNbit(bpp);break;
         default:
             printf("Unsupported bpp, only 1 or 4");
             break;
@@ -237,7 +237,7 @@ bool  FontConverter::convert()
   *
   * @return
   */
- bool FontConverter::convert4bit()
+ bool FontConverter::convertNbit(int n)
  {
      int err;
      FT_Glyph glyph;
@@ -284,7 +284,16 @@ bool  FontConverter::convert()
           const uint8_t *line=bitmap->buffer+y * bitmap->pitch;
           for (int x = 0; x < bitmap->width; x++)
           {
-            bitPusher.add4Bits(line[x]>>4);
+            switch(n)
+            {
+                case 4: bitPusher.add4Bits(line[x]>>4);break;
+                case 2: bitPusher.add2Bits(line[x]>>6);break;
+                case 8: bitPusher.add8Bits(line[x]);break;
+                default:
+                    printf("Unsupported bpp\n");
+                    exit(-1);
+                    break;
+            }
           }
         }
         if(compressed)
@@ -373,139 +382,4 @@ bool  FontConverter::convert()
     return true;
  }
 
-
- /**
-  *
-  * @return
-  */
- bool FontConverter::convert2bit()
- {
-     int err;
-     FT_Glyph glyph;
-     PFXglyph zeroGlyph= (PFXglyph){0,0,0,0,0,0};     
-     for(int i=first;i<=last;i++)
-     {
-
-        // MONO renderer provides clean image with perfect crop
-        // (no wasted pixels) via bitmap struct.
-        bool renderingOk=true;
-        if ((err = FT_Load_Char(face, i, FT_LOAD_TARGET_NORMAL))) {     fprintf(stderr, "Error %d loading char '%c'\n", err, i); renderingOk=false;   }
-        if ((err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))) {      fprintf(stderr, "Error %d rendering char '%c'\n", err, i);     renderingOk=false;  }
-        if ((err = FT_Get_Glyph(face->glyph, &glyph))) {      fprintf(stderr, "Error %d getting glyph '%c'\n", err, i);    renderingOk=false;    }
-
-        if(!renderingOk)
-        {
-            listOfGlyphs.push_back(zeroGlyph);
-            continue;
-        }
-        FT_Bitmap *bitmap = &face->glyph->bitmap;
-        FT_BitmapGlyphRec *g= (FT_BitmapGlyphRec *)glyph;
-
-        // Minimal font and per-glyph information is stored to
-        // reduce flash space requirements.  Glyph bitmaps are
-        // fully bit-packed; no per-scanline pad, though end of
-        // each character may be padded to next byte boundary
-        // when needed.  16-bit offset means 64K max for bitmaps,
-        // code currently doesn't check for overflow.  (Doesn't
-        // check that size & offsets are within bounds either for
-        // that matter...please convert fonts responsibly.)
-        bitPusher.align();
-        int startOffset=bitPusher.offset();
-        PFXglyph thisGlyph;
-        thisGlyph.bitmapOffset = bitPusher.offset();
-        thisGlyph.width = bitmap->width;
-        thisGlyph.height = bitmap->rows;
-        thisGlyph.xAdvance = face->glyph->advance.x >> 6;
-        thisGlyph.xOffset = g->left;
-        thisGlyph.yOffset = 1 - g->top;
-        listOfGlyphs.push_back(thisGlyph);
-
-        for (int y = 0; y < bitmap->rows; y++)
-        {
-          const uint8_t *line=bitmap->buffer+y * bitmap->pitch;
-          for (int x = 0; x < bitmap->width; x++)
-          {
-            bitPusher.add2Bits(line[x]>>6);
-          }
-        }
-        if(compressed)
-        {
-            bitPusher.align();
-            int size=bitPusher.offset()-startOffset;
-            compressInPlace((uint8_t *)(bitPusher.data()+startOffset),size);
-            bitPusher.setOffset(startOffset+size);
-        }
-
-    }
-    face_height= face->size->metrics.height >> 6;
-    FT_Done_Glyph(glyph);
-    return true;
- }
-
- /**
-  *
-  * @return
-  */
- bool FontConverter::convert8bit()
- {
-     int err;
-     FT_Glyph glyph;
-     PFXglyph zeroGlyph= (PFXglyph){0,0,0,0,0,0};     
-     for(int i=first;i<=last;i++)
-     {
-
-        // MONO renderer provides clean image with perfect crop
-        // (no wasted pixels) via bitmap struct.
-        bool renderingOk=true;
-        if ((err = FT_Load_Char(face, i, FT_LOAD_TARGET_NORMAL))) {     fprintf(stderr, "Error %d loading char '%c'\n", err, i); renderingOk=false;   }
-        if ((err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))) {      fprintf(stderr, "Error %d rendering char '%c'\n", err, i);     renderingOk=false;  }
-        if ((err = FT_Get_Glyph(face->glyph, &glyph))) {      fprintf(stderr, "Error %d getting glyph '%c'\n", err, i);    renderingOk=false;    }
-
-        if(!renderingOk)
-        {
-            listOfGlyphs.push_back(zeroGlyph);
-            continue;
-        }
-        FT_Bitmap *bitmap = &face->glyph->bitmap;
-        FT_BitmapGlyphRec *g= (FT_BitmapGlyphRec *)glyph;
-
-        // Minimal font and per-glyph information is stored to
-        // reduce flash space requirements.  Glyph bitmaps are
-        // fully bit-packed; no per-scanline pad, though end of
-        // each character may be padded to next byte boundary
-        // when needed.  16-bit offset means 64K max for bitmaps,
-        // code currently doesn't check for overflow.  (Doesn't
-        // check that size & offsets are within bounds either for
-        // that matter...please convert fonts responsibly.)
-        bitPusher.align();
-        int startOffset=bitPusher.offset();
-        PFXglyph thisGlyph;
-        thisGlyph.bitmapOffset = bitPusher.offset();
-        thisGlyph.width = bitmap->width;
-        thisGlyph.height = bitmap->rows;
-        thisGlyph.xAdvance = face->glyph->advance.x >> 6;
-        thisGlyph.xOffset = g->left;
-        thisGlyph.yOffset = 1 - g->top;
-        listOfGlyphs.push_back(thisGlyph);
-
-        for (int y = 0; y < bitmap->rows; y++)
-        {
-          const uint8_t *line=bitmap->buffer+y * bitmap->pitch;
-          for (int x = 0; x < bitmap->width; x++)
-          {
-            bitPusher.add8Bits(line[x]);
-          }
-        }
-        if(compressed)
-        {
-            bitPusher.align();
-            int size=bitPusher.offset()-startOffset;
-            compressInPlace((uint8_t *)(bitPusher.data()+startOffset),size);
-            bitPusher.setOffset(startOffset+size);
-        }
-
-    }
-    face_height= face->size->metrics.height >> 6;
-    FT_Done_Glyph(glyph);
-    return true;
- }
+// EOF

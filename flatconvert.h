@@ -133,9 +133,7 @@ public:
 protected:
     bool                initFreeType(int size);
     bool                convert1bit();
-    bool                convert2bit();
-    bool                convert4bit();
-    bool                convert8bit();
+    bool                convertNbit(int n);
     FT_Library          library;
     FT_Face             face;
     std::string         fontFile,symbolName,outputFile;
