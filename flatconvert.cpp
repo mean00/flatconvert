@@ -36,7 +36,7 @@ void usage()
  */
 int main(int argc, char *argv[]) 
 {
-    printf("Usage:  flatconver -s size -f fontToUse (-o output file] [-b first char] [-e last char] [-p bpp (1 or 4)] [-c heatshrink compress]\n");
+    printf("Usage:  flatconver -s size -f fontToUse (-o output file] [-b first char] [-e last char] [-p bpp (1,2 or 4)] [-c heatshrink compress]\n");
     
     cxxopts::Options options("fatconvert", "cleaner version of adafruit fontconvert, ttf to GFXfont");
   
@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
     ("e,end_char",      "last glyph",   cxxopts::value<int>()->default_value("0x7e")) // ~
     ("o,output_file",   "output file",  cxxopts::value<std::string>())
     ("m,bitmap_file",   "bitmap binaryfile",  cxxopts::value<std::string>()->default_value(""))
-    ("p,bpp",           "bit per pixel (1 or 4)",  cxxopts::value<int>()->default_value("1"))
+    ("p,bpp",           "bit per pixel (1,2 or 4)",  cxxopts::value<int>()->default_value("1"))
     ("c,compression",   "compress with heatshrink",  cxxopts::value<bool>()->default_value("false"))
   
     ;
@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
       
   std::string fileName = fontFile.substr(fontFile.find_last_of("/\\") + 1);
   fileName= std::regex_replace(fileName, std::regex(" "), "_");  
+  fileName= std::regex_replace(fileName, std::regex("-"), "_");  
   std::string::size_type const p(fileName.find_last_of('.'));
   fileName = fileName.substr(0, p);
   
