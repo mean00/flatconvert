@@ -242,6 +242,7 @@ bool  FontConverter::convert()
      int err;
      FT_Glyph glyph;
      PFXglyph zeroGlyph= (PFXglyph){0,0,0,0,0,0};     
+     if(!face) return false;
      for(int i=first;i<=last;i++)
      {
 
@@ -249,8 +250,8 @@ bool  FontConverter::convert()
         // (no wasted pixels) via bitmap struct.
         bool renderingOk=true;
         if ((err = FT_Load_Char(face, i, FT_LOAD_TARGET_NORMAL))) {     fprintf(stderr, "Error %d loading char '%c'\n", err, i); renderingOk=false;   }
-        if ((err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))) {      fprintf(stderr, "Error %d rendering char '%c'\n", err, i);     renderingOk=false;  }
-        if ((err = FT_Get_Glyph(face->glyph, &glyph))) {      fprintf(stderr, "Error %d getting glyph '%c'\n", err, i);    renderingOk=false;    }
+        if (renderingOk && (err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))) {      fprintf(stderr, "Error %d rendering char '%c'\n", err, i);     renderingOk=false;  }
+        if (renderingOk && (err = FT_Get_Glyph(face->glyph, &glyph))) {      fprintf(stderr, "Error %d getting glyph '%c'\n", err, i);    renderingOk=false;    }
 
         if(!renderingOk)
         {
@@ -287,7 +288,14 @@ bool  FontConverter::convert()
             switch(n)
             {
                 case 4: bitPusher.add4Bits(line[x]>>4);break;
-                case 2: bitPusher.add2Bits(line[x]>>6);break;
+                case 2: 
+                {
+                    const uint8_t p2[4]={' ','-','+','*'};
+                        int pix=line[x]>>6;
+                        //printf("%c",p2[pix]);
+                        bitPusher.add2Bits(pix);
+                }
+                        break;
                 case 8: bitPusher.add8Bits(line[x]);break;
                 default:
                     printf("Unsupported bpp\n");
@@ -295,6 +303,7 @@ bool  FontConverter::convert()
                     break;
             }
           }
+         // printf("\n");
         }
         if(compressed)
         {
@@ -319,6 +328,7 @@ bool  FontConverter::convert()
  {
      int err;
      FT_Glyph glyph;
+     if(!face) return false;
      PFXglyph zeroGlyph= (PFXglyph){0,0,0,0,0,0};
      for(int i=first;i<=last;i++)
      {
