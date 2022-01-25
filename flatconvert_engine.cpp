@@ -291,7 +291,8 @@ bool  FontConverter::convert()
                 case 2: 
                 {
                     const uint8_t p2[4]={' ','-','+','*'};
-                        int pix=line[x]>>6;
+                        int pix=(line[x]+31)>>6;
+                        if(pix>3) pix=3;
                         //printf("%c",p2[pix]);
                         bitPusher.add2Bits(pix);
                 }
