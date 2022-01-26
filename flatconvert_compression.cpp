@@ -33,7 +33,7 @@ extern "C"
      const uint8_t *src=in;
      int     size=inoutSize;
 
-     heatshrink_encoder *hse = heatshrink_encoder_alloc(8, 4);
+     heatshrink_encoder *hse = heatshrink_encoder_alloc(8, 4); // 8 4
      if(!hse)
      {
          printf("Cannot initialize heatshrink\n");

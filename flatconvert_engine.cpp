@@ -33,6 +33,7 @@ See notes at end for glyph nomenclature & other tidbits.
     face_height=0;
     output=NULL;
     compressed=false;
+    _totalUncompressedSize=0;
  }
  FontConverter::~FontConverter()
  {
@@ -210,7 +211,16 @@ void   FontConverter::printFooter()
   }
   fprintf(output,"\n  %1d,%1d}; // bit per pixel, compression \n\n",bpp,(int)compressed);
   int sz=bitPusher.offset();
-  fprintf(output,"// Bitmap : about %d bytes (%d kBytes)\n",sz,(sz+1023)/1024);
+  if(compressed)
+  {
+    fprintf(output,"// Bitmap uncompressed : about %d bytes (%d kBytes)\n",_totalUncompressedSize,(_totalUncompressedSize+1023)/1024);    
+  }
+  fprintf(output,"// Bitmap output size   : about %d bytes (%d kBytes)\n",sz,(sz+1023)/1024);
+  if(compressed)
+  {
+    fprintf(output,"// compressed size : %d %%\n",(100*sz)/_totalUncompressedSize);
+  }
+
   sz=(last-first+1)*sizeof(PFXglyph);
   fprintf(output,"// Header : about %d bytes (%d kBytes)\n",sz,(sz+1023)/1024);
   sz+=bitPusher.offset()+sizeof(PFXfont);
@@ -306,10 +316,11 @@ bool  FontConverter::convert()
           }
          // printf("\n");
         }
+        bitPusher.align();
+        int size=bitPusher.offset()-startOffset;
+        _totalUncompressedSize+=size;
         if(compressed)
-        {
-            bitPusher.align();
-            int size=bitPusher.offset()-startOffset;
+        {            
             compressInPlace((uint8_t *)(bitPusher.data()+startOffset),size);
             bitPusher.setOffset(startOffset+size);
         }
@@ -380,10 +391,11 @@ bool  FontConverter::convert()
             bitPusher.addBit(line[byte] & bit);
           }
         }
+        bitPusher.align();
+        int size=bitPusher.offset()-startOffset;
+        _totalUncompressedSize+=size;
         if(compressed)
         {
-            bitPusher.align();
-            int size=bitPusher.offset()-startOffset;
             compressInPlace((uint8_t *)(bitPusher.data()+startOffset),size);
             bitPusher.setOffset(startOffset+size);
         }

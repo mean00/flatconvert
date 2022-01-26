@@ -144,5 +144,6 @@ protected:
     BitPusher           bitPusher;
     int                 face_height;
     FILE                *output;
+    int                 _totalUncompressedSize;
     
 };
