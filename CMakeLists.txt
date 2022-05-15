@@ -18,7 +18,7 @@ ADD_DEFINITIONS(${FREETYPE2_CFLAGS})
 LINK_DIRECTORIES(${FREETYPE2_LIBRARY_DIR})
 
 ADD_DEFINITIONS("-DCXXOPTS_NO_EXCEPTIONS")
-ADD_DEFINITIONS("-g3 -o0")
+ADD_DEFINITIONS("-g3 -O0")
 
 include_directories(cxxopts/include)
 include_directories(hs/heatshrink)
