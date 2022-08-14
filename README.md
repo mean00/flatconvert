@@ -5,7 +5,7 @@ The code has been cleaned up and supports 1/2/4 bit per pixel fonts + heatshrink
 
 flatconvert -f fontfile -s size -o outputfile [-b firstChar] [-e lastChar]  [-m bitmapfile] [-p bitperpixel (1 or 4)] [-c compressed] [-k "abcde"]
 
-The -k allow you to pick only the glyphs you really need. That helps a lot size wise when dealing with large fonts.
+The -k allows you to pick only the glyphs you really need. That helps a lot size-wise when dealing with large fonts.
 
 to build:
 
