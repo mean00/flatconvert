@@ -43,8 +43,9 @@ int main(int argc, char *argv[])
   options.add_options()
     ("f,font",          "font to use",  cxxopts::value<std::string>()) // a bool parameter
     ("s,size",          "font size",    cxxopts::value<int>())
+    ("k,pick",          "string with chars to use",  cxxopts::value<std::string>()->default_value(""))
     ("b,begin_char",    "first glyph",  cxxopts::value<int>()->default_value("32"))
-    ("e,end_char",      "last glyph",   cxxopts::value<int>()->default_value("0x7e")) // ~
+    ("e,end_char",      "last glyph",   cxxopts::value<int>()->default_value("127")) // ~
     ("o,output_file",   "output file",  cxxopts::value<std::string>())
     ("m,bitmap_file",   "bitmap binaryfile",  cxxopts::value<std::string>()->default_value(""))
     ("p,bpp",           "bit per pixel (1,2 or 4)",  cxxopts::value<int>()->default_value("1"))
@@ -58,6 +59,7 @@ int main(int argc, char *argv[])
    int last = result["end_char"].as<int>();
    int size=result["size"].as<int>();
    int bpp=result["bpp"].as<int>();
+   std::string pick=result["pick"].as<std::string>();
    std::string fontFile=result["font"].as<std::string>();
    std::string outputFile=result["output_file"].as<std::string>();
    std::string bitmapFile=result["bitmap_file"].as<std::string>();  
@@ -80,7 +82,25 @@ int main(int argc, char *argv[])
   {
       outputFile=symbolName+std::string(".h");
   }
-  
+ 
+  int mapp[255];
+  for(int i=0;i<128;i++) mapp[i]=0;
+  if(pick.size())
+  {
+        int l=pick.size();    
+        const char *x=pick.c_str();
+        for(int i=0;i<l;i++)
+        {
+            mapp[x[i]]=1;
+        }
+        
+        for(int i=0;i<127;i++) if(mapp[i]) { first=i;break;}
+        for(int i=127;i>=0;i--) if(mapp[i]) { last=i;break;}
+  }else
+  {
+        for(int i=first;i<=last;i++) mapp[i]=1;
+  }
+
   
   printf("Processing font %s\n",fontFile.c_str());
   printf("Generating symbol %s\n",symbolName.c_str());
@@ -90,7 +110,7 @@ int main(int argc, char *argv[])
 
   FontConverter *converter=new FontConverter(fontFile,symbolName,outputFile);
   
-  if(!converter->init(size,bpp,first,last))
+  if(!converter->init(size,bpp,first,last,mapp))
   {
       printf("Failed to init converter\n");
       exit(1);

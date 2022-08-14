@@ -3,7 +3,7 @@ This is a fork of https://github.com/charles-haynes/fontconvert, which is itself
 
 The code has been cleaned up and supports 4 bit per pixel fonts + heatshrink compression
 
-flatconvert -f fontfile -s size -o outputfile [-b firstChar] [-e lastChar]  [-m bitmapfile] [-p bitperpixel (1 or 4)] [-c compressed]
+flatconvert -f fontfile -s size -o outputfile [-b firstChar] [-e lastChar]  [-m bitmapfile] [-p bitperpixel (1 or 4)] [-c compressed] [-k "abcde"]
 
 to build:
 

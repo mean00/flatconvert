@@ -120,7 +120,7 @@ public:
                         FontConverter(const std::string &fontFile, const std::string &symbolName, const std::string &outputFile);
                         ~FontConverter();
         bool           enableCompression() {compressed=true;return true;}
-        bool           init(int size,int bpp, int first, int last);
+        bool           init(int size,int bpp, int first, int last,int *mapp);
         bool           convert();
         void           printHeader();
         void           printIndex();
@@ -138,12 +138,12 @@ protected:
     FT_Face             face;
     std::string         fontFile,symbolName,outputFile;
     bool                ftInited;
-    int                 first,last,bpp;  
+    int                 first,last, bpp;  
     bool                compressed;
     std::vector<PFXglyph > listOfGlyphs;
     BitPusher           bitPusher;
     int                 face_height;
     FILE                *output;
     int                 _totalUncompressedSize;
-    
+    const int           *_mapp; 
 };

@@ -95,9 +95,10 @@ bool    FontConverter::initFreeType(int size)
  * @param size
  * @return
  */
-bool    FontConverter::init(int size, int bpp,int xfirst, int xlast)
+bool    FontConverter::init(int size, int bpp,int xfirst, int xlast, int *mapp)
 {
     this->bpp=bpp;
+    this->_mapp=mapp;
     if(!initFreeType(size)) return false;
     if(xlast>xfirst)
     {
@@ -108,6 +109,9 @@ bool    FontConverter::init(int size, int bpp,int xfirst, int xlast)
        first=xlast;
        last=xfirst ;
     }
+
+
+
     output=fopen(outputFile.c_str(),"wb");
     if(!output)
     {
@@ -253,9 +257,13 @@ bool  FontConverter::convert()
      FT_Glyph glyph;
      PFXglyph zeroGlyph= (PFXglyph){0,0,0,0,0,0};     
      if(!face) return false;
-     for(int i=first;i<=last;i++)
+     for(int i=first;i<= last;i++)
      {
-
+        if(!_mapp[i])
+        {
+            listOfGlyphs.push_back(zeroGlyph);
+            continue;
+        } 
         // MONO renderer provides clean image with perfect crop
         // (no wasted pixels) via bitmap struct.
         bool renderingOk=true;
@@ -342,8 +350,13 @@ bool  FontConverter::convert()
      FT_Glyph glyph;
      if(!face) return false;
      PFXglyph zeroGlyph= (PFXglyph){0,0,0,0,0,0};
-     for(int i=first;i<=last;i++)
+     for(int i=first;i<= last;i++)
      {
+        if(!_mapp[i])
+        {
+            listOfGlyphs.push_back(zeroGlyph);
+            continue;
+        } 
 
         // MONO renderer provides clean image with perfect crop
         // (no wasted pixels) via bitmap struct.
